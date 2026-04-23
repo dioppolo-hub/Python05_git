@@ -37,19 +37,17 @@ class NumericProcessor(DataProcessor):
         else:
             return False
 
-    def ingest(self, data: Any) -> None:
+    def ingest(self, data: int | float | list[int | float]) -> None:
         try:
             self.counter = 0
             if isinstance(data, (int, float)):
-                s = f"{data}"
-                self.Memory.append(s)
+                self.Memory.append(str(data))
             elif isinstance(data, list):
                 for item in data:
                     if not isinstance(item, (int, float)):
                         raise ValueError
                 for item in data:
-                    s = f"{item}"
-                    self.Memory.append(s)
+                    self.Memory.append(str(item))
             else:
                 raise ValueError
         except ValueError:
@@ -68,17 +66,17 @@ class TextProcessor(DataProcessor):
         else:
             return False
 
-    def ingest(self, data: Any) -> None:
+    def ingest(self, data: str | list[str]) -> None:
         try:
             self.counter = 0
             if isinstance(data, str):
-                self.Memory.append(data)
+                self.Memory.append(str(data))
             elif isinstance(data, list):
                 for item in data:
                     if not isinstance(item, str):
                         raise ValueError
                 for item in data:
-                    self.Memory.append(item)
+                    self.Memory.append(str(item))
             else:
                 raise ValueError
         except ValueError:
@@ -87,17 +85,21 @@ class TextProcessor(DataProcessor):
 
 class LogProcessor(DataProcessor):
     def validate(self, data: Any) -> bool:
-        if isinstance(data, dict):
-            return True
-        elif isinstance(data, list):
-            for item in data:
-                if not isinstance(item, dict):
-                    return False
-            return True
-        else:
-            return False
 
-    def ingest(self, data: Any) -> None:
+        def is_valid_dict(d):
+            return(
+                    isinstance(d, dict) and
+                    all(isinstance(k, str) and
+                        isinstance(v, str) for k, v in d.items())
+            )
+
+        if is_valid_dict(data):
+            return True
+        if isinstance(data, list):
+            return all(is_valid_dict(item) for item in data)
+        return False
+
+    def ingest(self, data: dict[str, str] | list[dict[str, str]]) -> None:
         try:
             self.counter = 0
 
@@ -111,13 +113,13 @@ class LogProcessor(DataProcessor):
             if isinstance(data, dict):
                 if not is_valid_dict(data):
                     raise ValueError
-                self.Memory.append(data)
+                self.Memory.append(str(data))
             elif isinstance(data, list):
                 for item in data:
                     if not is_valid_dict(item):
                         raise ValueError
                 for item in data:
-                    self.Memory.append(item)
+                    self.Memory.append(str(item))
             else:
                 raise ValueError
         except ValueError:
@@ -125,6 +127,9 @@ class LogProcessor(DataProcessor):
 
 
 class DataStream():
+    def __init__(self)
+
+
     def register_processor(self, proc: DataProcessor) -> None:
 
 
