@@ -5,6 +5,7 @@ from typing import Any
 class DataProcessor(ABC):
     def __init__(self):
         self.Memory = []
+        self.total_processed = 0
         self.counter = 0
 
     @abstractmethod
@@ -39,15 +40,16 @@ class NumericProcessor(DataProcessor):
 
     def ingest(self, data: int | float | list[int | float]) -> None:
         try:
-            self.counter = 0
             if isinstance(data, (int, float)):
                 self.Memory.append(str(data))
+                self.total_processed += 1
             elif isinstance(data, list):
                 for item in data:
                     if not isinstance(item, (int, float)):
                         raise ValueError
                 for item in data:
                     self.Memory.append(str(item))
+                self.total_processed += len(data)
             else:
                 raise ValueError
         except ValueError:
@@ -68,15 +70,16 @@ class TextProcessor(DataProcessor):
 
     def ingest(self, data: str | list[str]) -> None:
         try:
-            self.counter = 0
             if isinstance(data, str):
                 self.Memory.append(str(data))
+                self.total_processed += 1
             elif isinstance(data, list):
                 for item in data:
                     if not isinstance(item, str):
                         raise ValueError
                 for item in data:
                     self.Memory.append(str(item))
+                self.total_processed += len(data)
             else:
                 raise ValueError
         except ValueError:
@@ -101,7 +104,6 @@ class LogProcessor(DataProcessor):
 
     def ingest(self, data: dict[str, str] | list[dict[str, str]]) -> None:
         try:
-            self.counter = 0
 
             def is_valid_dict(d):
                 return(
@@ -114,12 +116,14 @@ class LogProcessor(DataProcessor):
                 if not is_valid_dict(data):
                     raise ValueError
                 self.Memory.append(str(data))
+                self.total_processed += 1
             elif isinstance(data, list):
                 for item in data:
                     if not is_valid_dict(item):
                         raise ValueError
                 for item in data:
                     self.Memory.append(str(item))
+                self.total_processed += len(data)
             else:
                 raise ValueError
         except ValueError:
@@ -129,10 +133,6 @@ class LogProcessor(DataProcessor):
 class DataStream():
     def __init__(self):
         self.ProcMem = []
-        self.textStream = 0
-        self.numStream = 0
-        self.logStream = 0
-        self.sizeStream = 0
 
 
     def register_processor(self, proc: DataProcessor) -> None:
@@ -151,17 +151,11 @@ class DataStream():
     def process_stream(self, stream: list[Any]) -> None:
         for item in stream:
             handled = False
-            self.sizeStream += 1
             for proc in self.ProcMem:
                 if proc.validate(item):
                     proc.ingest(item)
-                    if isinstance(proc, NumericProcessor):
-                        self.numStream += 1
-                    elif isinstance(proc, TextProcessor):
-                        self.textStream += 1
-                    elif isinstance(proc, LogProcessor):
-                        self.logStream += 1
                     handled = True
+                    break
             if not handled:
                 print(
                     "DataStream error "
@@ -170,36 +164,17 @@ class DataStream():
 
 
     def print_processors_stats(self) -> None:
-        Tstream = self.textStream
-        Nstream = self.numStream
-        Lstream = self.logStream
-        Sstream = self.sizeStream
         for proc in self.ProcMem:
-            if isinstance(proc, NumericProcessor):
-                NotPstream = Sstream - Nstream
-                print(
-                    f"Numeric Processor: total {Nstream} "
-                    f"item processed, remaining {NotPstream} on processor"
-                )
-            elif isinstance(proc, TextProcessor):
-                NotPstream = Sstream - Tstream
-                print(
-                    f"Text Processor: total {Tstream} "
-                    f"item processed, remaining {NotPstream} on processor"
-                )
-            elif isinstance(proc, LogProcessor):
-                NotPstream = Sstream - Lstream
-                print(
-                    f"Log Processor: total {Lstream} "
-                    f"item processed, remaining {NotPstream} on processor"
-                )
-        print(f"Resume: Numeric {Nstream}, Text: {Tstream}, Log {Lstream}")
+            print(
+                f"{proc.__class__.__name__}: "
+                f"{proc.total_processed} items processed, "
+                f"{len(proc.Memory)} items remaining on processor"
+            )
 
 
 if __name__ == "__main__":
-    print("=== Code Nexus - Data Strem ===\n")
+    print("\n=== Code Nexus - Data Strem ===")
     ds = DataStream()
-    ds.register_processor(NumericProcessor())
     stream = [
         "Hello Word",
         42,
@@ -208,9 +183,19 @@ if __name__ == "__main__":
         ["x", "y"],
         3.14
     ]
+    ds.register_processor(NumericProcessor())
     ds.register_processor(LogProcessor())
     ds.register_processor(TextProcessor())
     ds.process_stream(stream)
     print(f"Send first batch of data: {stream}")
-    print("=== DataStress statistic ===\n")
+    print("\n=== DataStream statistic BEFORE output ===")
+    ds.print_processors_stats()
+    print("\n=== Consuming data from processors ===")
+    for proc in ds.ProcMem:
+        while True:
+            idx, val = proc.output()
+            if idx == -1:
+                break
+            print(f"{proc.__class__.__name__} -> ({idx}, {val})")
+    print("\n=== DataStream statistic AFTER output ===")
     ds.print_processors_stats()

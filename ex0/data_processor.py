@@ -39,7 +39,6 @@ class NumericProcessor(DataProcessor):
 
     def ingest(self, data: int | float | list[int | float]) -> None:
         try:
-            self.counter = 0
             if isinstance(data, (int, float)):
                 self.Memory.append(str(data))
             elif isinstance(data, list):
@@ -68,7 +67,6 @@ class TextProcessor(DataProcessor):
 
     def ingest(self, data: str | list[str]) -> None:
         try:
-            self.counter = 0
             if isinstance(data, str):
                 self.Memory.append(str(data))
             elif isinstance(data, list):
@@ -101,7 +99,6 @@ class LogProcessor(DataProcessor):
 
     def ingest(self, data: dict[str, str] | list[dict[str, str]]) -> None:
         try:
-            self.counter = 0
 
             def is_valid_dict(d):
                 return(
